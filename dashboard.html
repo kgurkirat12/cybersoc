@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | CyberSOC Operations{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fa-solid fa-shield-cat" style="color: var(--cyber-cyan);"></i> Security Operations Dashboard
+        </h1>
+        <div class="page-subtitle">Real-time intrusion detection, log telemetry, and threat response matrix</div>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; font-weight: 600; background: rgba(0, 242, 254, 0.05); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0, 242, 254, 0.2);">
+            <i class="fa-solid fa-arrows-rotate fa-spin" style="color: var(--cyber-cyan);"></i> LIVE DB AUTO-SYNC
+        </span>
+        <a href="{{ url_for('logs') }}" class="btn btn-secondary">
+            <i class="fa-solid fa-terminal"></i> Log Analyzer
+        </a>
+        <a href="{{ url_for('reports') }}" class="btn btn-primary">
+            <i class="fa-solid fa-file-pdf"></i> Export PDF Report
+        </a>
+    </div>
+</div>
+
+<!-- SOC Statistics Cards Matrix -->
+<div class="stats-grid">
+    <div class="stat-card total">
+        <div class="stat-label">
+            <span>Total Telemetry Logs</span>
+            <i class="fa-solid fa-database"></i>
+        </div>
+        <div class="stat-value" id="stat-total-logs">{{ stats.total_logs }}</div>
+        <div class="stat-foot">Ingested system & web events</div>
+    </div>
+
+    <div class="stat-card critical">
+        <div class="stat-label">
+            <span>Critical Alerts</span>
+            <i class="fa-solid fa-radiation"></i>
+        </div>
+        <div class="stat-value" id="stat-critical-alerts">{{ stats.critical_alerts }}</div>
+        <div class="stat-foot">Immediate response required</div>
+    </div>
+
+    <div class="stat-card high">
+        <div class="stat-label">
+            <span>High Risk Alerts</span>
+            <i class="fa-solid fa-fire"></i>
+        </div>
+        <div class="stat-value" id="stat-high-alerts">{{ stats.high_alerts }}</div>
+        <div class="stat-foot">Active exploit indicators</div>
+    </div>
+
+    <div class="stat-card medium">
+        <div class="stat-label">
+            <span>Medium Risk Alerts</span>
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="stat-value" id="stat-medium-alerts">{{ stats.medium_alerts }}</div>
+        <div class="stat-foot">Suspicious activity warning</div>
+    </div>
+
+    <div class="stat-card low">
+        <div class="stat-label">
+            <span>Low Risk Alerts</span>
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="stat-value" id="stat-low-alerts">{{ stats.low_alerts }}</div>
+        <div class="stat-foot">Policy & minor anomalies</div>
+    </div>
+</div>
+
+<!-- Interactive Chart Analytics Grid -->
+<div class="charts-grid">
+    <!-- Security Activity Timeline Chart -->
+    <div class="chart-card col-8">
+        <div class="card-title">
+            <span><i class="fa-solid fa-chart-area" style="color: var(--cyber-cyan);"></i> Security Activity & Threat Timeline</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Real-time Telemetry Ingestion vs Threat Alerts</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="activityTimelineChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Severity Distribution Chart -->
+    <div class="chart-card col-4">
+        <div class="card-title">
+            <span><i class="fa-solid fa-chart-pie" style="color: var(--color-critical);"></i> Alert Severity Breakdown</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="severityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Attack Categories -->
+    <div class="chart-card col-6">
+        <div class="card-title">
+            <span><i class="fa-solid fa-bug" style="color: var(--color-high);"></i> Top Detected Attack Vectors</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="attackTypesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Suspicious Source IPs -->
+    <div class="chart-card col-6">
+        <div class="card-title">
+            <span><i class="fa-solid fa-network-wired" style="color: var(--cyber-cyan);"></i> Top Suspicious Source IPs</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="topIpsChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Security Threat Alerts Table -->
+<div class="table-card">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">
+            <i class="fa-solid fa-bolt" style="color: var(--color-critical);"></i> Recent Security Threat Alerts
+        </h2>
+        <a href="{{ url_for('alerts') }}" style="font-size: 0.85rem; font-weight: 600;">View All Threats &rarr;</a>
+    </div>
+    <div class="soc-table-wrapper">
+        <table class="soc-table">
+            <thead>
+                <tr>
+                    <th>Alert ID</th>
+                    <th>Timestamp</th>
+                    <th>Threat Category</th>
+                    <th>Severity</th>
+                    <th>Source IP</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="recent-alerts-tbody">
+                {% for alert in alerts %}
+                <tr>
+                    <td style="font-family: var(--font-mono); color: var(--cyber-cyan);">#{{ alert.id }}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-secondary);">{{ alert.timestamp[:19] }}</td>
+                    <td>
+                        <strong style="color: var(--text-primary);">{{ alert.alert_type }}</strong>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ alert.category }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ alert.severity|lower }}">
+                            {{ alert.severity }}
+                        </span>
+                    </td>
+                    <td><span class="ip-badge">{{ alert.source_ip }}</span></td>
+                    <td>
+                        <span class="badge-status status-{{ alert.status|lower }}">
+                            {{ alert.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('alert_detail', alert_id=alert.id) }}" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-eye"></i> Investigate
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No security threats detected.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

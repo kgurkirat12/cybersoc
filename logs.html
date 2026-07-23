@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Log Telemetry & Threat Analyzer | CyberSOC{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fa-solid fa-terminal" style="color: var(--cyber-cyan);"></i> Log Telemetry & Security Analyzer
+        </h1>
+        <div class="page-subtitle">Inspect raw log feeds or simulate security incident payloads with the rule-based threat detector</div>
+    </div>
+</div>
+
+<!-- Interactive Log Threat Analyzer Form Card -->
+<div class="table-card" style="padding: 1.5rem; margin-bottom: 2rem; border-color: rgba(0, 242, 254, 0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--cyber-cyan);">
+            <i class="fa-solid fa-microchip"></i> Interactive Threat Payload Analyzer
+        </h2>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">Paste custom log string or click attack simulation presets below</span>
+    </div>
+
+    <!-- Attack Presets Bar -->
+    <div class="presets-bar">
+        <span style="font-size: 0.8rem; color: var(--text-secondary); margin-right: 0.5rem; align-self: center; font-weight: 600;">Presets:</span>
+        <button type="button" class="preset-btn" data-preset="sqli"><i class="fa-solid fa-bug"></i> SQL Injection</button>
+        <button type="button" class="preset-btn" data-preset="xss"><i class="fa-solid fa-code"></i> XSS Payload</button>
+        <button type="button" class="preset-btn" data-preset="bruteforce"><i class="fa-solid fa-key"></i> SSH Brute Force</button>
+        <button type="button" class="preset-btn" data-preset="portscan"><i class="fa-solid fa-radar"></i> Port Scan</button>
+        <button type="button" class="preset-btn" data-preset="malicious_ip"><i class="fa-solid fa-network-wired"></i> C2 IP Activity</button>
+        <button type="button" class="preset-btn" data-preset="normal"><i class="fa-solid fa-circle-check"></i> Clean Log</button>
+    </div>
+
+    <form action="{{ url_for('analyze_log_endpoint') }}" method="POST">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+            <div>
+                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Source IP</label>
+                <input type="text" id="source_ip" name="source_ip" class="form-control" placeholder="e.g. 185.220.101.5" value="185.220.101.5">
+            </div>
+
+            <div>
+                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Username / Account</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="e.g. admin or root" value="admin">
+            </div>
+
+            <div>
+                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Category</label>
+                <select id="category" name="category" class="form-select">
+                    <option value="Web Security">Web Security</option>
+                    <option value="Authentication">Authentication</option>
+                    <option value="Network Security">Network Security</option>
+                    <option value="System">System</option>
+                </select>
+            </div>
+
+            <div>
+                <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Log Level</label>
+                <select id="log_level" name="log_level" class="form-select">
+                    <option value="INFO">INFO</option>
+                    <option value="WARNING">WARNING</option>
+                    <option value="ERROR">ERROR</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 4px;">Raw Security Log Payload / String</label>
+            <textarea id="raw_log" name="raw_log" class="form-control" rows="3" placeholder="Paste syslog, nginx access log, or security event raw text..." required>GET /products.php?id=1' OR '1'='1 -- HTTP/1.1</textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-magnifying-glass-chart"></i> Analyze Log & Generate Threat Alert
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Telemetry Logs Stream Table -->
+<div class="table-card">
+    <div style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <h2 style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">
+            <i class="fa-solid fa-list-ul" style="color: var(--cyber-cyan);"></i> Ingested Telemetry Log Feed ({{ logs|length }} Logs)
+        </h2>
+
+        <!-- Filters Form -->
+        <form method="GET" action="{{ url_for('logs') }}" style="display: flex; gap: 0.75rem; align-items: center;">
+            <select name="category" class="form-select" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                <option value="Web Security" {% if selected_category == 'Web Security' %}selected{% endif %}>Web Security</option>
+                <option value="Authentication" {% if selected_category == 'Authentication' %}selected{% endif %}>Authentication</option>
+                <option value="Network Security" {% if selected_category == 'Network Security' %}selected{% endif %}>Network Security</option>
+                <option value="System" {% if selected_category == 'System' %}selected{% endif %}>System</option>
+            </select>
+
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; cursor: pointer; white-space: nowrap;">
+                <input type="checkbox" name="threat_only" value="1" {% if threat_only %}checked{% endif %} onchange="this.form.submit()">
+                Threats Only
+            </label>
+        </form>
+    </div>
+
+    <div class="soc-table-wrapper">
+        <table class="soc-table">
+            <thead>
+                <tr>
+                    <th>Log ID</th>
+                    <th>Timestamp</th>
+                    <th>Source IP</th>
+                    <th>User</th>
+                    <th>Category</th>
+                    <th>Log Level</th>
+                    <th>Log Message / Raw Telemetry</th>
+                    <th>Threat State</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr {% if log.is_threat %}style="background: rgba(244, 63, 94, 0.05);"{% endif %}>
+                    <td style="font-family: var(--font-mono); color: var(--text-muted);">#{{ log.id }}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap;">{{ log.timestamp[:19] }}</td>
+                    <td><span class="ip-badge">{{ log.source_ip }}</span></td>
+                    <td style="font-family: var(--font-mono); font-size: 0.8rem;">{{ log.username or 'N/A' }}</td>
+                    <td><span style="font-size: 0.8rem; color: var(--text-secondary);">{{ log.category }}</span></td>
+                    <td>
+                        <span class="badge {% if log.log_level == 'CRITICAL' %}badge-critical{% elif log.log_level == 'ERROR' %}badge-high{% elif log.log_level == 'WARNING' %}badge-medium{% else %}badge-info{% endif %}">
+                            {{ log.log_level }}
+                        </span>
+                    </td>
+                    <td style="font-family: var(--font-mono); font-size: 0.8rem; color: #cbd5e1; max-width: 450px; word-break: break-all;">
+                        {{ log.message }}
+                    </td>
+                    <td>
+                        {% if log.is_threat %}
+                            <span class="badge badge-critical"><i class="fa-solid fa-triangle-exclamation"></i> THREAT</span>
+                        {% else %}
+                            <span class="badge badge-low"><i class="fa-solid fa-check"></i> CLEAN</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No logs matching filter criteria.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}Alert #{{ alert.id }} - {{ alert.alert_type }} | CyberSOC{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url_for('alerts') }}" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-arrow-left"></i> Back to Threat Alerts
+        </a>
+        <h1 class="page-title">
+            <i class="fa-solid fa-shield-virus" style="color: var(--color-critical);"></i> Alert Detail: {{ alert.title }}
+        </h1>
+        <div class="page-subtitle">Security Operations Center Forensic Investigation & Remediation</div>
+    </div>
+    <div>
+        <form action="{{ url_for('change_alert_status', alert_id=alert.id) }}" method="POST" style="display: flex; gap: 0.5rem; align-items: center;">
+            <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Status:</span>
+            <select name="status" class="form-select status-{{ alert.status|lower }}" onchange="this.form.submit()" style="width: auto; font-weight: 700;">
+                <option value="New" {% if alert.status == 'New' %}selected{% endif %}>New</option>
+                <option value="Investigating" {% if alert.status == 'Investigating' %}selected{% endif %}>Investigating</option>
+                <option value="Resolved" {% if alert.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <!-- Left Main Column: Alert Technical Metadata & Payload -->
+    <div>
+        <!-- Alert Summary Card -->
+        <div class="table-card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                <i class="fa-solid fa-circle-info" style="color: var(--cyber-cyan);"></i> Threat Profile & Metadata
+            </h2>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Alert Type</label>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">{{ alert.alert_type }}</div>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Severity Rating</label>
+                    <div>
+                        <span class="badge badge-{{ alert.severity|lower }}" style="font-size: 0.85rem; padding: 4px 12px;">
+                            {{ alert.severity }}
+                        </span>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Source IP (Attacker)</label>
+                    <div><span class="ip-badge" style="font-size: 0.95rem;">{{ alert.source_ip }}</span></div>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Destination IP (Target Host)</label>
+                    <div><span class="ip-badge" style="font-size: 0.95rem; color: var(--text-primary);">{{ alert.destination_ip or '10.0.0.5' }}</span></div>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Detected Timestamp</label>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary); font-family: var(--font-mono);">{{ alert.timestamp }}</div>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Security Category</label>
+                    <div style="font-size: 0.9rem; color: var(--cyber-cyan); font-weight: 600;">{{ alert.category }}</div>
+                </div>
+            </div>
+
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Incident Description</label>
+                <p style="font-size: 0.9rem; color: #cbd5e1; background: rgba(15, 23, 42, 0.6); padding: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                    {{ alert.description }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Raw Log Payload Card -->
+        <div class="table-card" style="padding: 1.5rem;">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                <i class="fa-solid fa-code" style="color: var(--cyber-cyan);"></i> Intercepted Raw Payload / Log Event
+            </h2>
+            <div class="code-box">{{ alert.raw_log }}</div>
+        </div>
+    </div>
+
+    <!-- Right Column: Recommended SOC Playbook Actions -->
+    <div>
+        <div class="playbook-box">
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: #38bdf8; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-user-shield"></i> SOC Playbook Response
+            </h2>
+
+            <div style="margin-bottom: 1.25rem;">
+                <h3 style="font-size: 0.85rem; text-transform: uppercase; color: var(--cyber-cyan); letter-spacing: 0.5px; margin-bottom: 0.4rem;">Recommended Mitigation</h3>
+                <div style="font-size: 0.875rem; color: #e2e8f0; line-height: 1.6; background: rgba(15, 23, 42, 0.5); padding: 0.85rem; border-radius: 6px; border: 1px solid rgba(0, 242, 254, 0.2);">
+                    {{ alert.recommended_action }}
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <h3 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px; margin-bottom: 0.4rem;">Analyst Checklist</h3>
+                <ul style="font-size: 0.825rem; color: var(--text-secondary); padding-left: 1.25rem; line-height: 1.7;">
+                    <li>Verify if IP address {{ alert.source_ip }} is internal or external.</li>
+                    <li>Check firewall drop rules and Web Application Firewall (WAF).</li>
+                    <li>Confirm whether target host {{ alert.destination_ip or '10.0.0.5' }} responded with HTTP 200 or HTTP 403.</li>
+                    <li>Update alert status to <strong>Investigating</strong> while analyzing, then <strong>Resolved</strong> once contained.</li>
+                </ul>
+            </div>
+
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <a href="{{ url_for('alerts') }}" class="btn btn-secondary" style="width: 100%; justify-content: center;">
+                    <i class="fa-solid fa-check"></i> Return to Alerts Matrix
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

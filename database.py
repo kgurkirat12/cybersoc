@@ -494,7 +494,7 @@ def get_chart_analytics():
             "threats": timeline_threats
         }
     }
-    def get_ip_threat_intelligence(source_ip):
+def get_ip_threat_intelligence(source_ip):
     """
     Returns threat intelligence summary for a specific source IP
     based on existing CyberSOC alert and log data.

@@ -494,3 +494,108 @@ def get_chart_analytics():
             "threats": timeline_threats
         }
     }
+    def get_ip_threat_intelligence(source_ip):
+    """
+    Returns threat intelligence summary for a specific source IP
+    based on existing CyberSOC alert and log data.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Get all alerts associated with this IP
+    cursor.execute("""
+        SELECT *
+        FROM alerts
+        WHERE source_ip = ?
+        ORDER BY timestamp DESC
+    """, (source_ip,))
+
+    alert_rows = cursor.fetchall()
+    alerts = [dict(row) for row in alert_rows]
+
+    # Get all logs associated with this IP
+    cursor.execute("""
+        SELECT *
+        FROM logs
+        WHERE source_ip = ?
+        ORDER BY timestamp DESC
+        LIMIT 20
+    """, (source_ip,))
+
+    log_rows = cursor.fetchall()
+    logs = [dict(row) for row in log_rows]
+
+    conn.close()
+
+    # Calculate statistics
+    alert_count = len(alerts)
+
+    severity_counts = {
+        "Critical": 0,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0
+    }
+
+    for alert in alerts:
+        severity = alert.get("severity")
+        if severity in severity_counts:
+            severity_counts[severity] += 1
+
+    # Calculate threat score
+    threat_score = 0
+
+    threat_score += severity_counts["Critical"] * 25
+    threat_score += severity_counts["High"] * 15
+    threat_score += severity_counts["Medium"] * 8
+    threat_score += severity_counts["Low"] * 3
+
+    # Limit score to 100
+    threat_score = min(threat_score, 100)
+
+    # Determine risk level
+    if threat_score >= 70:
+        risk_level = "Critical"
+    elif threat_score >= 40:
+        risk_level = "High"
+    elif threat_score >= 15:
+        risk_level = "Medium"
+    elif threat_score > 0:
+        risk_level = "Low"
+    else:
+        risk_level = "Unknown"
+
+    # Recommended action
+    if risk_level == "Critical":
+        recommended_action = (
+            "Immediately block the IP address at the firewall and investigate "
+            "all associated security incidents."
+        )
+    elif risk_level == "High":
+        recommended_action = (
+            "Monitor the IP closely, review associated alerts, and consider "
+            "blocking the IP at the perimeter firewall."
+        )
+    elif risk_level == "Medium":
+        recommended_action = (
+            "Continue monitoring the IP and investigate repeated suspicious activity."
+        )
+    elif risk_level == "Low":
+        recommended_action = (
+            "Monitor the IP for additional suspicious activity."
+        )
+    else:
+        recommended_action = (
+            "No known threat activity found in the CyberSOC database."
+        )
+
+    return {
+        "ip": source_ip,
+        "risk_level": risk_level,
+        "threat_score": threat_score,
+        "alert_count": alert_count,
+        "severity_counts": severity_counts,
+        "alerts": alerts,
+        "logs": logs,
+        "recommended_action": recommended_action
+    }
